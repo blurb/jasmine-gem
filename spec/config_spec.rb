@@ -364,7 +364,7 @@ describe Jasmine::Config do
 
           describe "raw_src_dir" do
             it "returns the src directory" do
-              File.absolute_path(@config.src_dir).should == File.absolute_path(@project_dir)
+              File.expand_path(@config.src_dir).should == File.expand_path(@project_dir)
             end
           end
         end
