@@ -18,6 +18,7 @@ module Jasmine
       @runner.start
       load_suite_info
       wait_for_suites_to_finish_running
+      save_coverage_report! if @config.coverage_enabled?
     end
 
     def stop
