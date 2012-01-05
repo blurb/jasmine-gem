@@ -2,6 +2,7 @@ module Jasmine
   class Config
     require 'yaml'
     require 'erb'
+    require 'headless'
 
     def browser
       ENV["JASMINE_BROWSER"] || 'firefox'
@@ -22,12 +23,15 @@ module Jasmine
     end
 
     def start
+      @headless = Headless.new
+      @headless.start
       start_jasmine_server
       @client = Jasmine::SeleniumDriver.new(browser, "#{jasmine_host}:#{@jasmine_server_port}/")
       @client.connect
     end
 
     def stop
+      @headless.destroy
       @client.disconnect
     end
 

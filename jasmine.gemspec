@@ -47,5 +47,5 @@ Gem::Specification.new do |s|
   s.add_dependency 'rspec', '>= 1.3.1'
   s.add_dependency 'json_pure', '>= 1.4.3'
   s.add_dependency 'selenium-webdriver', '>= 0.1.3'
-
+  s.add_dependency 'headless', '0.2.2'
 end
