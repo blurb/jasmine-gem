@@ -1,24 +1,23 @@
-require File.expand_path(File.join(File.dirname(__FILE__), "spec_helper"))
-
+require 'spec_helper'
 require 'jasmine_self_test_config'
 
-jasmine_config = JasmineSelfTestConfig.new
-spec_builder = Jasmine::SpecBuilder.new(jasmine_config)
+jasmine_runner_config = Jasmine::RunnerConfig.new(JasmineSelfTestConfig.new)
+server = Jasmine::Server.new(jasmine_runner_config.port, Jasmine::Application.app(jasmine_runner_config))
+client = Jasmine::SeleniumDriver.new(jasmine_runner_config.browser,
+                                     "#{jasmine_runner_config.jasmine_host}:#{jasmine_runner_config.port}/")
 
-should_stop = false
-
-if rspec2?
-  RSpec.configuration.after(:suite) do
-    spec_builder.stop if should_stop
+t = Thread.new do
+  begin
+    server.start
+  rescue ChildProcess::TimeoutError
   end
-else
-  Spec::Runner.configure do |config|
-    config.after(:suite) do
-      spec_builder.stop if should_stop
-    end
-  end
+  # # ignore bad exits
 end
+t.abort_on_exception = true
+Jasmine::wait_for_listener(jasmine_runner_config.port, "jasmine server")
+puts "jasmine server started."
 
-spec_builder.start
-should_stop = true
-spec_builder.declare_suites
+results_processor = Jasmine::ResultsProcessor.new(jasmine_runner_config)
+results = Jasmine::Runners::HTTP.new(client, results_processor).run
+formatter = Jasmine::RspecFormatter.new
+formatter.format_results(results)

@@ -9,7 +9,7 @@ module Jasmine
     end
 
     def template_path(filepath)
-      expand(cwd, File.join("generators/jasmine/templates", filepath))
+      expand(cwd, File.join("generators", "jasmine" ,"templates", filepath))
     end
 
     def dest_path(filepath)
@@ -35,8 +35,6 @@ module Jasmine
         copy_unless_exists('jasmine-example/src/Song.js', 'public/javascripts/Song.js')
         copy_unless_exists('jasmine-example/spec/PlayerSpec.js', 'spec/javascripts/PlayerSpec.js')
         copy_unless_exists('jasmine-example/spec/SpecHelper.js', 'spec/javascripts/helpers/SpecHelper.js')
-        copy_unless_exists('spec/javascripts/support/jasmine_runner.rb')
-        copy_unless_exists('spec/javascripts/support/jasmine_config.rb')
 
         rails_tasks_dir = dest_path('lib/tasks')
         if File.exist?(rails_tasks_dir)
@@ -44,13 +42,13 @@ module Jasmine
           copy_unless_exists('spec/javascripts/support/jasmine-rails.yml', 'spec/javascripts/support/jasmine.yml')
         else
           copy_unless_exists('spec/javascripts/support/jasmine.yml')
+          require 'rake'
           write_mode = 'w'
           if File.exist?(dest_path('Rakefile'))
             load dest_path('Rakefile')
             write_mode = 'a'
           end
 
-          require 'rake'
           unless Rake::Task.task_defined?('jasmine')
             File.open(dest_path('Rakefile'), write_mode) do |f|
               f.write("\n" + File.read(template_path('lib/tasks/jasmine.rake')))

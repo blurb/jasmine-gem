@@ -1,5 +1,8 @@
 source "http://rubygems.org"
-
-# dependencies are specified in jasmine.gemspec
-
 gemspec
+
+unless ENV["TRAVIS"]
+  group :debug do
+    gem 'debugger'
+  end
+end

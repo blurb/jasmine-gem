@@ -1,6 +1,6 @@
-require File.expand_path(File.join(File.dirname(__FILE__), "spec_helper"))
+require 'spec_helper'
 
-if rails2?
+if Jasmine::Dependencies.rails2? && !Jasmine::Dependencies.legacy_rails?
 
   describe "A Rails 2 app" do
 
@@ -17,7 +17,7 @@ if rails2?
 
     context "before Jasmine has been installed" do
 
-      it "should not the jasmine:install generator" do
+      it "should not show the jasmine:install generator" do
         output = `./script/generate --help`
         output.should_not include('jasmine:install')
       end
@@ -41,7 +41,7 @@ if rails2?
 
     context "when the Jasmine generators are available" do
       before :each do
-        `mkdir -p lib/generators && cp -R #{@root}/generators/jasmine lib/generators`
+        `mkdir -p lib/generators && ln -s #{@root}/generators/jasmine lib/generators/jasmine`
       end
 
       it "should show the Jasmine generator" do
@@ -60,15 +60,8 @@ if rails2?
           `./script/generate jasmine`
         end
 
-        %w(
-          spec/javascripts/helpers/jscoverage.js
-          spec/javascripts/support/jasmine.yml
-          spec/javascripts/support/jasmine_runner.rb
-          spec/javascripts/support/jasmine_config.rb
-        ).each do |file|
-          it "should have the Jasmine configuration file #{file}" do
-            file.should exist
-          end
+        it "should find the Jasmine configuration files" do
+          File.exists?("spec/javascripts/support/jasmine.yml").should == true
         end
 
         %w(
@@ -78,6 +71,7 @@ if rails2?
           spec/javascripts/PlayerSpec.js
           spec/javascripts/helpers/SpecHelper.js
 
+          spec/javascripts/helpers/jscoverage.js
           spec/javascripts/support/jasmine.yml
           spec/javascripts/support/jasmine_runner.rb
           spec/javascripts/support/jasmine_config.rb
