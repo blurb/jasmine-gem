@@ -13,23 +13,52 @@
   <% end %>
 
   <script type="text/javascript">
+    //TODO: make this a js file that gets passed in, then iterate over only js_files
     var jsApiReporter;
     (function() {
       var jasmineEnv = jasmine.getEnv();
 
       jsApiReporter = new jasmine.JsApiReporter();
-      var trivialReporter = new jasmine.TrivialReporter();
+      var htmlReporter = new jasmine.HtmlReporter();
 
       jasmineEnv.addReporter(jsApiReporter);
-      jasmineEnv.addReporter(trivialReporter);
+      jasmineEnv.addReporter(htmlReporter);
 
       jasmineEnv.specFilter = function(spec) {
-        return trivialReporter.specFilter(spec);
+        return htmlReporter.specFilter(spec);
       };
 
+      var currentWindowOnload = window.onload;
+
       window.onload = function() {
-        jasmineEnv.execute();
+        if (currentWindowOnload) {
+          currentWindowOnload();
+        }
+        execJasmine();
       };
+
+      function execJasmine() {
+        jasmineEnv.execute();
+      }
+
+    <% if coverage_enabled? %>
+      var id = setInterval(function() {
+        if (jsApiReporter.finished) {
+          clearInterval(id);
+          var report = window.jasmine.coverageReport();
+          $.ajax({
+            url: '/report',
+            type: 'POST',
+            data: {report: JSON.stringify(report)},
+            error: function(xhr, status, errorThrown) {
+              console.log('error: ' + status);
+              console.log(errorThrown);
+            }
+          });
+        }
+      }, 1000);
+    <% end %>
+
     })();
   </script>
 

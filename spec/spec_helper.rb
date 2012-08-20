@@ -3,32 +3,22 @@ require "bundler"
 require 'stringio'
 require 'tmpdir'
 
-Bundler.setup(:default, :development)
+envs = [:default, :development]
+envs << :debug if ENV["DEBUG"]
+Bundler.setup(*envs)
 
-def rspec2?
-  Gem.available? "rspec", ">= 2.0"
-end
+$:.unshift(File.expand_path(File.join(File.dirname(__FILE__), "../lib")))
+require "jasmine"
 
-def rails2?
-  Gem.available? "rails", "~> 2.3"
-end
-
-def rails3?
-  Gem.available? "rails", ">= 3.0"
-end
-
-if rspec2?
+if Jasmine::Dependencies.rspec2?
   require 'rspec'
 else
   require 'spec'
 end
 
-$:.unshift(File.expand_path(File.join(File.dirname(__FILE__), "../lib")))
-
-require "jasmine"
 
 def create_rails(name)
-  if rails3?
+  if Jasmine::Dependencies.rails3?
     `rails new #{name}`
   else
     `rails #{name}`

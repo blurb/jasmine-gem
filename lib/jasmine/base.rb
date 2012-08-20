@@ -2,10 +2,6 @@ require 'socket'
 require 'erb'
 
 module Jasmine
-  def self.root
-    ENV["JASMINE_ROOT"] || File.expand_path(File.join(File.dirname(__FILE__), '../../jasmine'))
-  end
-
   # this seemingly-over-complex method is necessary to get an open port on at least some of our Macs
   def self.open_socket_on_unused_port
     infos = Socket::getaddrinfo("localhost", nil, Socket::AF_UNSPEC, Socket::SOCK_STREAM, 0, Socket::AI_PASSIVE)
@@ -34,7 +30,7 @@ module Jasmine
     true
   end
 
-  def self.wait_for_listener(port, name = "required process", seconds_to_wait = 10)
+  def self.wait_for_listener(port, name = "required process", seconds_to_wait = 20)
     time_out_at = Time.now + seconds_to_wait
     until server_is_listening_on "localhost", port
       sleep 0.1
@@ -43,24 +39,12 @@ module Jasmine
     end
   end
 
-  def self.cachebust(files, root_dir="", replace=nil, replace_with=nil)
-    require 'digest/md5'
-    files.collect do |file_name|
-      real_file_name = replace && replace_with ? file_name.sub(replace, replace_with) : file_name
-      begin
-        digest = Digest::MD5.hexdigest(File.read("#{root_dir}#{real_file_name}"))
-      rescue
-        digest = "MISSING-FILE"
-      end
-      "#{file_name}?cachebust=#{digest}"
-    end
+  def self.runner_filepath
+    File.expand_path(File.join(File.dirname(__FILE__), "run_specs.rb"))
   end
 
-  def self.rspec2?
-    Gem.available? "rspec", ">= 2.0"
+  def self.runner_template
+    File.read(File.join(File.dirname(__FILE__), "run.html.erb"))
   end
-  
-  def self.rails3?
-    Gem.available? "rails", ">= 3.0"
-  end
+
 end
