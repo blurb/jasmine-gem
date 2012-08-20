@@ -1,4 +1,4 @@
-# The Jasmine Gem
+# The Jasmine Gem <a title="Build at Travis CI" href="http://travis-ci.org/#!/pivotal/jasmine-gem"><img src="https://secure.travis-ci.org/pivotal/jasmine-gem.png" /></a>
 
 The [Jasmine](http://github.com/pivotal/jasmine) Ruby Gem is a package of helper code for developing Jasmine projects for Ruby-based web projects (Rails, Sinatra, etc.) or for JavaScript projects where Ruby is a welcome partner. It serves up a project's Jasmine suite in a browser so you can focus on your code instead of manually editing script tags in the Jasmine runner HTML file.
 
@@ -34,7 +34,13 @@ Start the Jasmine server:
 
 `rake jasmine`
 
-Point your browser to `localhost:8888`. The suite will run every time this page is re-loaded.
+Point your browser to `localhost:8888`. The suite will run every time this page is re-loaded.  
+
+Start Jasmine on a different port:
+
+`rake jasmine JASMINE_PORT=1337`
+
+Point your browser to `localhost:1337`. 
 
 For Continuous Integration environments, add this task to the project build steps:
 

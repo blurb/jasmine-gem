@@ -1,9 +1,11 @@
-require File.expand_path(File.join(File.dirname(__FILE__), "spec_helper"))
+require 'spec_helper'
 require 'selenium-webdriver'
 
 describe Jasmine::Config do
   describe "configuration" do
     before :each do
+      Jasmine::Dependencies.stub(:rails_3_asset_pipeline?) { false }
+
       temp_dir_before
 
       Dir::chdir @tmp
@@ -195,6 +197,18 @@ describe Jasmine::Config do
         end
       end
 
+      describe "should permit explicity-declared filenames to pass through regardless of their existence" do
+        before(:each) do
+          Dir.stub!(:glob).and_return { |glob_string| [] }
+          fake_config = Hash.new.stub!(:[]).and_return { |x| ["file1.ext", "!file2.ext", "**/*file3.ext"] }
+          @config.stub!(:simple_config).and_return(fake_config)
+        end
+
+        it "should contain explicitly files" do
+          @config.src_files.should == ["file1.ext"]
+        end
+      end
+
       describe "should allow .gitignore style negation (!pattern)" do
         before(:each) do
           Dir.stub!(:glob).and_return { |glob_string| [glob_string] }
@@ -372,86 +386,55 @@ describe Jasmine::Config do
     end
   end
 
-  describe "environment variables" do
-    def stub_env_hash(hash)
-      ENV.stub!(:[]) do |arg|
-        hash[arg]
-      end
-      ENV.stub(:has_key?){|k| hash.has_key? k}
+  describe "jasmine_stylesheets" do
+    it "should return the relative web server path to the core Jasmine css stylesheets" do
+      #TODO: wrap Jasmine::Core with a class that knows about the core path and the relative mapping.
+      Jasmine::Core.stub(:css_files).and_return(["my_css_file1.css", "my_css_file2.css"])
+      Jasmine::Config.new.jasmine_stylesheets.should == ["/__JASMINE_ROOT__/my_css_file1.css", "/__JASMINE_ROOT__/my_css_file2.css"]
     end
-    describe "browser configuration" do
-      it "should use firefox by default" do
-        stub_env_hash({"JASMINE_BROWSER" => nil})
-        config = Jasmine::Config.new
-        config.stub!(:start_jasmine_server)
-        Jasmine::SeleniumDriver.should_receive(:new).
-            with("firefox", anything).
-            and_return(mock(Jasmine::SeleniumDriver, :connect => true))
-        config.start
-      end
+  end
 
-      it "should use ENV['JASMINE_BROWSER'] if set" do
-        stub_env_hash({"JASMINE_BROWSER" => "mosaic"})
-        config = Jasmine::Config.new
-        config.stub!(:start_jasmine_server)
-        Jasmine::SeleniumDriver.should_receive(:new).
-            with("mosaic", anything).
-            and_return(mock(Jasmine::SeleniumDriver, :connect => true))
-        config.start
-      end
+  describe "jasmine_javascripts" do
+    it "should return the relative web server path to the core Jasmine css javascripts" do
+      Jasmine::Core.stub(:js_files).and_return(["my_js_file1.js", "my_js_file2.js"])
+      Jasmine::Config.new.jasmine_javascripts.should == ["/__JASMINE_ROOT__/my_js_file1.js", "/__JASMINE_ROOT__/my_js_file2.js"]
+    end
+  end
+
+  describe "when the asset pipeline is active" do
+    before do
+      Jasmine::Dependencies.stub(:rails_3_asset_pipeline?) { true }
     end
 
-    describe "jasmine host" do
-      it "should use http://localhost by default" do
-        stub_env_hash({})
-        config = Jasmine::Config.new
-        config.instance_variable_set(:@jasmine_server_port, '1234')
-        config.stub!(:start_jasmine_server)
+    let(:src_files) { ["assets/some.js", "assets/files.js"] }
 
-        Jasmine::SeleniumDriver.should_receive(:new).
-            with(anything, "http://localhost:1234/").
-            and_return(mock(Jasmine::SeleniumDriver, :connect => true))
-        config.start
-      end
-
-      it "should use ENV['JASMINE_HOST'] if set" do
-        stub_env_hash({"JASMINE_HOST" => "http://some_host"})
-        config = Jasmine::Config.new
-        config.instance_variable_set(:@jasmine_server_port, '1234')
-        config.stub!(:start_jasmine_server)
-
-        Jasmine::SeleniumDriver.should_receive(:new).
-            with(anything, "http://some_host:1234/").
-            and_return(mock(Jasmine::SeleniumDriver, :connect => true))
-        config.start
-      end
-
-      it "should use ENV['JASMINE_PORT'] if set" do
-        stub_env_hash({"JASMINE_PORT" => "4321"})
-        config = Jasmine::Config.new
-        Jasmine.stub!(:wait_for_listener)
-        config.stub!(:start_server)
-        Jasmine::SeleniumDriver.should_receive(:new).
-            with(anything, "http://localhost:4321/").
-            and_return(mock(Jasmine::SeleniumDriver, :connect => true))
-        config.start
+    let(:config) do
+      Jasmine::Config.new.tap do |config|
+        #TODO: simple_config should be a passed in hash
+        config.stub(:simple_config)  { { 'src_files' => src_files} }
       end
     end
 
-    describe "external selenium server" do
-      it "should use an external selenium server if SELENIUM_SERVER is set" do
-        stub_env_hash({"SELENIUM_SERVER" => "http://myseleniumserver.com:4441"})
-        Selenium::WebDriver.should_receive(:for).with(:remote, :url => "http://myseleniumserver.com:4441", :desired_capabilities => :firefox)
-        Jasmine::SeleniumDriver.new('firefox', 'http://localhost:8888')
-      end
-      it "should use an local selenium server with a specific port if SELENIUM_SERVER_PORT is set" do
-        stub_env_hash({"SELENIUM_SERVER_PORT" => "4441"})
-        Selenium::WebDriver.should_receive(:for).with(:remote, :url => "http://localhost:4441/wd/hub", :desired_capabilities => :firefox)
-        Jasmine::SeleniumDriver.new('firefox', 'http://localhost:8888')
-      end
+    it "should use AssetPipelineMapper to return src_files" do
+      mapped_files =  ["some.js", "files.js"]
+      Jasmine::AssetPipelineMapper.stub_chain(:new, :files).and_return(mapped_files)
+      config.src_files.should == mapped_files
+    end
+
+    it "should pass the config src_files to the AssetPipelineMapper" do
+      Jasmine::Config.stub(:simple_config)
+      Jasmine::AssetPipelineMapper.should_receive(:new).with(src_files).and_return(double("mapper").as_null_object)
+      config.src_files
     end
 
     describe "coverage support" do
+      def stub_env_hash(hash)
+        ENV.stub!(:[]) do |arg|
+          hash[arg]
+        end
+        ENV.stub(:has_key?){|k| hash.has_key? k}
+      end
+      
       it "uses JASMINE_COVERAGE_ENABLED if JASMINE_COVERAGE_ENABLED is set" do
         stub_env_hash({"JASMINE_COVERAGE_ENABLED" => "true" })
         config = Jasmine::Config.new

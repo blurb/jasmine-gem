@@ -7,8 +7,10 @@ bin
 .rvmrc
 .pairs
 *.swp
+tags
 Gemfile.lock
 spec/reports
 /tmp
 /.autotest
 /.rspec
+.rvmrc

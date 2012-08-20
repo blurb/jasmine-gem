@@ -3,74 +3,13 @@ module Jasmine
     require 'yaml'
     require 'erb'
 
-    def browser
-      ENV["JASMINE_BROWSER"] || 'firefox'
-    end
-
-    def jasmine_host
-      ENV["JASMINE_HOST"] || 'http://localhost'
-    end
-
-    def jasmine_port
-      ENV["JASMINE_PORT"] || Jasmine::find_unused_port
-    end
-
-    def start_server(port = 8888)
-      server = Rack::Server.new(:Port => port, :AccessLog => [])
-      server.instance_variable_set(:@app, Jasmine.app(self)) # workaround for Rack bug, when Rack > 1.2.1 is released Rack::Server.start(:app => Jasmine.app(self)) will work
-      server.start
-    end
-
-    def start
-      start_jasmine_server
-      @client = Jasmine::SeleniumDriver.new(browser, "#{jasmine_host}:#{@jasmine_server_port}/")
-      @client.connect
-    end
-
-    def stop
-      @client.disconnect
-    end
-
-    def start_jasmine_server
-      @jasmine_server_port = jasmine_port
-      Thread.new do
-        start_server(@jasmine_server_port)
-      end
-      Jasmine::wait_for_listener(@jasmine_server_port, "jasmine server")
-      puts "jasmine server started."
-    end
-
-    def windows?
-      require 'rbconfig'
-      ::RbConfig::CONFIG['host_os'] =~ /mswin|mingw/
-    end
-
-    def run
-      begin
-        start
-        puts "servers are listening on their ports -- running the test script..."
-        tests_passed = @client.run
-      ensure
-        stop
-      end
-      return tests_passed
-    end
-
-    def eval_js(script)
-      @client.eval_js(script)
-    end
-
-    def json_generate(obj)
-      @client.json_generate(obj)
-    end
-
     def match_files(dir, patterns)
       dir = File.expand_path(dir)
       negative, positive = patterns.partition {|pattern| /^!/ =~ pattern}
       chosen, negated = [positive, negative].collect do |patterns|
         patterns.collect do |pattern|
           matches = Dir.glob(File.join(dir, pattern.gsub(/^!/,'')))
-          matches.collect {|f| f.sub("#{dir}/", "")}.sort
+          matches.empty? && !(pattern =~ /\*|^\!/) ? pattern : matches.collect {|f| f.sub("#{dir}/", "")}.sort
         end.flatten.uniq
       end
       chosen - negated
@@ -95,7 +34,7 @@ module Jasmine
       src_files.collect {|f| "/" + f } + helpers.collect {|f| File.join(spec_path, f) } + spec_files_to_include.collect {|f| File.join(spec_path, f) }
     end
 
-    def css_files
+    def user_stylesheets
       stylesheets.collect {|f| "/" + f }
     end
 
@@ -188,8 +127,10 @@ module Jasmine
 
     def src_files
       files = 
-        if simple_config['src_files']
-          match_files(raw_src_dir, simple_config['src_files'])
+        if simple_config['src_files'] && Jasmine::Dependencies.rails_3_asset_pipeline?
+          Jasmine::AssetPipelineMapper.new(simple_config['src_files']).files
+        elsif simple_config['src_files']
+          match_files(src_dir, simple_config['src_files'])
         else
           []
         end
@@ -230,6 +171,14 @@ module Jasmine
       else
         []
       end
+    end
+
+    def jasmine_stylesheets
+      ::Jasmine::Core.css_files.map {|f| "/__JASMINE_ROOT__/#{f}"}
+    end
+
+    def jasmine_javascripts
+      ::Jasmine::Core.js_files.map {|f| "/__JASMINE_ROOT__/#{f}" }
     end
   end
 end
