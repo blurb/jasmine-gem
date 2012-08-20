@@ -41,6 +41,24 @@
         jasmineEnv.execute();
       }
 
+    <% if coverage_enabled? %>
+      var id = setInterval(function() {
+        if (jsApiReporter.finished) {
+          clearInterval(id);
+          var report = window.jasmine.coverageReport();
+          $.ajax({
+            url: '/report',
+            type: 'POST',
+            data: {report: JSON.stringify(report)},
+            error: function(xhr, status, errorThrown) {
+              console.log('error: ' + status);
+              console.log(errorThrown);
+            }
+          });
+        }
+      }, 1000);
+    <% end %>
+
     })();
   </script>
 

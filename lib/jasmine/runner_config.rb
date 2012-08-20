@@ -56,5 +56,9 @@ module Jasmine
       @port ||= ENV["JASMINE_PORT"] || Jasmine.find_unused_port
     end
 
+    def method_missing(meth, *args, &block)
+      @config.send(meth, *args, &block)
+    end
+
   end
 end

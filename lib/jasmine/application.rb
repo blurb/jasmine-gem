@@ -34,6 +34,10 @@ module Jasmine
             Rack::Jasmine::Runner.new(page)
           ])
         end
+
+        map('/report') do
+          run Rack::Jasmine::Reporter.new(config)
+        end
       end
     end
   end
